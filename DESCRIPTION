@@ -1,0 +1,26 @@
+Package: mecfun
+Type: Package
+Title: MEC Microbiome Helpers
+Version: 0.1.0
+Author: Isaac Jenkins
+Maintainer: Isaac Jenkins <ijenkins@fredhutch.org>
+Description: Functions to make my life easier when working with the MEC 
+    microbiome data. 
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.1.1
+Imports:
+    dplyr,
+    tidyr,
+    tibble,
+    forcats,
+    rlang,
+    knitr,
+    arsenal,
+    readr,
+    writexl,
+    htmltools,
+    viridis,
+    broom,
+    ggplot2
