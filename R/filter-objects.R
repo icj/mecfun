@@ -3,6 +3,7 @@
 #' Filters MEC data objects to pre-defined sample sets
 #' @param x The MEC data object to be filtered.
 #' @param study The MEC study to filter to.
+#' @name filter_mec
 #'
 #' @return The filtered data object
 #' @export
@@ -10,6 +11,8 @@ filter_mec <- function (x, study) {
   UseMethod("filter_mec", x)
 }
 
+#' @rdname filter_mec
+#' @export
 filter_mec.default <- function(x,
                                study = c("1", "2", "mGWAS", "MEC-APS",
                                          "LF5", "LF55", "PF5", "PF55",
@@ -34,6 +37,8 @@ filter_mec.default <- function(x,
   return(readRDS(fn))
 }
 
+#' @rdname filter_mec
+#' @export
 filter_mec.data.frame <- function(x, study) {
   ids <- filter_mec.default(x, study)
   id_cols <- intersect(names(x), names(ids))
@@ -43,6 +48,8 @@ filter_mec.data.frame <- function(x, study) {
   dplyr::semi_join(x, ids, by = id_cols)
 }
 
+#' @rdname filter_mec
+#' @export
 filter_mec.matrix <- function(x, study) {
   ids <- filter_mec.default(x, study)
   cn <- colnames(x)
@@ -57,6 +64,8 @@ filter_mec.matrix <- function(x, study) {
   x[id_keep, id_keep, drop = FALSE]
 }
 
+#' @rdname filter_mec
+#' @export
 filter_mec.dist <- function(x, study) {
   ids <- filter_mec.default(x, study)
   x <- as.matrix(x)
