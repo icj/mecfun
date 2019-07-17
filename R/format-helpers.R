@@ -141,12 +141,14 @@ mec_field <- function(x) {
     rs738409_geno = "PNPLA3",
     rs77249491_geno = "Hepatic risk loci"
   )
-  if (!x %in% names(fields)) {
-    warning("Field does not have a formal name")
-    return(x)
-  }
 
-  return(fields[x])
+  if (all(x %in% names(fields))) return(fields[x])
+
+  warning("Missing formal name(s)")
+  out <- fields[x]
+  names(out) <- x
+  out[is.na(out)] <- x[is.na(out)]
+  return(out)
 }
 
 #' Collapse Vector to Sentence
