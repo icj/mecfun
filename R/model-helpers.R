@@ -84,6 +84,92 @@ sniff.adonis <- function(x, ...) {
   return(out)
 }
 
+
+#' Polish Data Objects
+#'
+#' Select specified variables from data.frame or rows/columns from matrix/dist
+#' @param x The object to be polished
+#' @param id_col The column containing ids
+#' @param ... Columns passed to dplyr::select
+#' @param cols Columns to keep from matrix
+#' @param rows Rows to keep from matrix
+#' @param id Names/index to keep from dist
+#' @param mat Return dist object as matrix
+#' @name polish
+#'
+#' @return data.frame with specified colums or matrix/dist with specified rows/columns
+#' @importFrom stats as.dist
+#' @export
+polish <- function (x, ...) {
+  UseMethod("polish", x)
+}
+
+#' @rdname polish
+#' @export
+polish.data.frame <- function(x, id_col = "stool_id", ...) {
+  dplyr::select(x, id_col, ...)
+}
+
+#' @rdname polish
+#' @export
+polish.matrix <- function(x, cols = NULL, rows = NULL, ...) {
+  x[rows, cols, drop = FALSE]
+}
+
+#' @rdname polish
+#' @export
+polish.dist <- function(x, id = NULL, mat = FALSE, ...) {
+  x <- as.matrix(x)
+  x <- polish(x, id, id)
+  if (mat) return(x)
+  as.dist(x)
+}
+
+#' Retrieve Data Objects
+#'
+#' Load data (.rds file) and polish
+#' @param x Data to be loaded
+#' @param ... Arguments passed to polish()
+#' @param path Path to data directory
+#' @name retrieve
+#'
+#' @return Polished data.frame, matrix, or dist
+#' @export
+retrieve <- function (x, ...) {
+  UseMethod("retrieve", x)
+}
+
+#' @rdname retrieve
+#' @export
+retrieve.default <- function(x, ..., path = "Data") {
+  path <- file.path(path, paste0(x, ".rds"))
+  polish(readRDS(path), ...)
+}
+
+#' @rdname retrieve
+#' @export
+retrieve.list <- function(x, ..., path = "Data"){
+  x <- purrr::imap(x, ~ polish(retrieve(.y, path), .x))
+  purrr::reduce(x, dplyr::inner_join, by = "stool_id")
+}
+
+#' Create Formula
+#'
+#' formula with variable of interest placed as the last term
+#' @param x variable of interest
+#' @param adj adjustment variables
+#' @param y response variable
+#' @param ... Arguments passed to reformulate()
+#'
+#' @return formula
+#' @importFrom stats reformulate
+#' @export
+formadoo <- function(x, adj = NULL, y = NULL, ...) {
+  adj <- setdiff(unlist(adj), x)
+  x <- c(adj, x)
+  reformulate(x, y, ...)
+}
+
 #' Stratify Data
 #'
 #' Stratify a data frame by a list of strata
