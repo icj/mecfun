@@ -9,7 +9,7 @@
 \usage{
 polish(x, ...)
 
-\method{polish}{data.frame}(x, id_col = "stool_id", ...)
+\method{polish}{data.frame}(x, ...)
 
 \method{polish}{matrix}(x, cols = NULL, rows = NULL, ...)
 
@@ -19,8 +19,6 @@ polish(x, ...)
 \item{x}{The object to be polished}
 
 \item{...}{Columns passed to dplyr::select}
-
-\item{id_col}{The column containing ids}
 
 \item{cols}{Columns to keep from matrix}
 

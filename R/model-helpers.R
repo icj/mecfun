@@ -89,7 +89,6 @@ sniff.adonis <- function(x, ...) {
 #'
 #' Select specified variables from data.frame or rows/columns from matrix/dist
 #' @param x The object to be polished
-#' @param id_col The column containing ids
 #' @param ... Columns passed to dplyr::select
 #' @param cols Columns to keep from matrix
 #' @param rows Rows to keep from matrix
@@ -106,8 +105,8 @@ polish <- function (x, ...) {
 
 #' @rdname polish
 #' @export
-polish.data.frame <- function(x, id_col = "stool_id", ...) {
-  dplyr::select(x, id_col, ...)
+polish.data.frame <- function(x, ...) {
+  dplyr::select(x, "stool_id", ...)
 }
 
 #' @rdname polish
@@ -149,7 +148,7 @@ retrieve.default <- function(x, ..., path = "Data") {
 #' @rdname retrieve
 #' @export
 retrieve.list <- function(x, ..., path = "Data"){
-  x <- purrr::imap(x, ~ polish(retrieve(.y, path), .x))
+  x <- purrr::imap(x, ~ retrieve(.y, .x, path = path))
   purrr::reduce(x, dplyr::inner_join, by = "stool_id")
 }
 
