@@ -165,7 +165,8 @@ retrieve.list <- function(x, ..., path = "Data"){
 #' @importFrom stats reformulate
 #' @export
 formadoo <- function(x, adj = NULL, y = NULL, ...) {
-  adj <- setdiff(unlist(adj), x)
+  adj <- setdiff(unlist(adj), c(x, y))
+  x <- setdiff(x, y)
   x <- c(adj, x)
   reformulate(x, y, ...)
 }
