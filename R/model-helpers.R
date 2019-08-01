@@ -84,7 +84,6 @@ sniff.adonis <- function(x, ...) {
   return(out)
 }
 
-
 #' Polish Data Objects
 #'
 #' Select specified variables from data.frame or rows/columns from matrix/dist
@@ -130,6 +129,7 @@ polish.dist <- function(x, id = NULL, mat = FALSE, ...) {
 #' @param x Data to be loaded
 #' @param ... Arguments passed to polish()
 #' @param path Path to data directory
+#' @param join Type of join to use when retrieving list of data
 #' @name retrieve
 #'
 #' @return Polished data.frame, matrix, or dist
@@ -147,9 +147,9 @@ retrieve.default <- function(x, ..., path = "Data") {
 
 #' @rdname retrieve
 #' @export
-retrieve.list <- function(x, ..., path = "Data"){
+retrieve.list <- function(x, ..., path = "Data", join = dplyr::left_join){
   x <- purrr::imap(x, ~ retrieve(.y, .x, path = path))
-  purrr::reduce(x, dplyr::inner_join, by = "stool_id")
+  purrr::reduce(x, join, by = "stool_id")
 }
 
 #' Create Formula

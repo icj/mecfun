@@ -10,7 +10,7 @@ retrieve(x, ...)
 
 \method{retrieve}{default}(x, ..., path = "Data")
 
-\method{retrieve}{list}(x, ..., path = "Data")
+\method{retrieve}{list}(x, ..., path = "Data", join = dplyr::left_join)
 }
 \arguments{
 \item{x}{Data to be loaded}
@@ -18,6 +18,8 @@ retrieve(x, ...)
 \item{...}{Arguments passed to polish()}
 
 \item{path}{Path to data directory}
+
+\item{join}{Type of join to use when retrieving list of data}
 }
 \value{
 Polished data.frame, matrix, or dist
