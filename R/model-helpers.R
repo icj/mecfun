@@ -183,16 +183,16 @@ formadoo <- function(x, adj = NULL, y = NULL, ...) {
 #' @return tableby object
 #' @export
 get_tableby <- function(df, y, x, fm, lab = NULL, ...) {
-  frm <- formulize(y, x)
+  frm <- arsenal::formulize(y, x)
   df <- df %>%
     polish(y, x) %>%
     filter_mec(fm)
   if (!is.null(lab)) {
     labels(df)[[x]] <- lab
   }
-  tableby(frm, data = df,
-          numeric.stats = c("Nmiss", "meansd", "medianq1q3", "range"),
-          digits = 3, digits.pct = 0, ...)
+  arsenal::tableby(frm, data = df,
+                   numeric.stats = c("Nmiss", "meansd", "medianq1q3", "range"),
+                   digits = 3, digits.pct = 0, ...)
 }
 
 #' Get lm()
@@ -218,8 +218,8 @@ get_lm <- function(df, y, x, adj, fm, ...) {
   mod1 <- lm(frm1, data = df, ...)
   mod0 <- update(mod1, frm0)
 
-  m1_out <- try(list(tidy = tidy(mod1, conf.int = TRUE),
-                     glance = glance(mod1),
+  m1_out <- try(list(tidy = broom::tidy(mod1, conf.int = TRUE),
+                     glance = broom::glance(mod1),
                      lrt = lmtest::lrtest(mod0, mod1)))
 
   m1_out
@@ -279,16 +279,16 @@ get_polr_data <- function(df, x, adj, fm, bug = c("phyla", "genera"), ...) {
 #' @return list with tidy(), glance(), and lrtest() results
 #' @export
 get_polr_result <- function(m1, lrt) {
-  m1_out <- try(list(tidy = tidy(m1, exponentiate = TRUE) %>%
+  m1_out <- try(list(tidy = broom::tidy(m1, exponentiate = TRUE) %>%
                        filter(coefficient_type == "coefficient") %>%
                        bind_cols(
-                         confint_tidy(m1, func = stats::confint.default) %>%
+                         broom::confint_tidy(m1, func = stats::confint.default) %>%
                            mutate_all(exp) %>%
                            mutate(ci_lo = pmin(conf.low, conf.high),
                                   ci_hi = pmax(conf.low, conf.high)) %>%
                            select(conf.low = ci_lo, conf.high = ci_hi)) %>%
                        select(-coefficient_type),
-                     glance = glance(m1),
+                     glance = broom::glance(m1),
                      lrt = lrt))
   m1_out
 }
