@@ -12,6 +12,9 @@ LazyData: true
 RoxygenNote: 6.1.1
 Imports:
     dplyr,
+    glue,
+    magrittr,
+    stats,
     tidyr,
     tibble,
     forcats,
@@ -24,4 +27,7 @@ Imports:
     viridis,
     broom,
     purrr,
+    lmtest,
+    MASS,
+    vegan,
     ggplot2

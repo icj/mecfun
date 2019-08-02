@@ -170,6 +170,228 @@ formadoo <- function(x, adj = NULL, y = NULL, ...) {
   reformulate(x, y, ...)
 }
 
+#' Get tableby()
+#'
+#' Run custom tableby()
+#' @param df source data.frame
+#' @param y response variable
+#' @param x variable of interest
+#' @param fm MEC filter
+#' @param lab Label for x
+#' @param ... Arguments passed to tableby()
+#'
+#' @return tableby object
+#' @export
+get_tableby <- function(df, y, x, fm, lab = NULL, ...) {
+  frm <- formulize(y, x)
+  df <- df %>%
+    polish(y, x) %>%
+    filter_mec(fm)
+  if (!is.null(lab)) {
+    labels(df)[[x]] <- lab
+  }
+  tableby(frm, data = df,
+          numeric.stats = c("Nmiss", "meansd", "medianq1q3", "range"),
+          digits = 3, digits.pct = 0, ...)
+}
+
+#' Get lm()
+#'
+#' Run custom lm()
+#' @param df source data.frame
+#' @param y response variable
+#' @param x variable of interest
+#' @param adj adjustment varaiables
+#' @param fm MEC filter
+#' @param ... Arguments passed to lm()
+#'
+#' @return list with tidy(), glance(), and lrtest() results
+#' @export
+get_lm <- function(df, y, x, adj, fm, ...) {
+  df <- df %>%
+    polish(y, x, adj) %>%
+    filter_mec(fm) %>%
+    drop_na
+  frm1 <- formadoo(x = x, adj = adj, y = y)
+  frm0 <- formadoo(x = adj, y = y)
+
+  mod1 <- lm(frm1, data = df, ...)
+  mod0 <- update(mod1, frm0)
+
+  m1_out <- try(list(tidy = tidy(mod1, conf.int = TRUE),
+                     glance = glance(mod1),
+                     lrt = lmtest::lrtest(mod0, mod1)))
+
+  m1_out
+}
+
+#' SAS-like Proc Rank() for binning
+#'
+#' Run SAS-like proc rank to create bins
+#' @param x numeric vector
+#' @param k number of bins
+#' @param ties how to break ties (see rank)
+#'
+#' @return ordered factor
+#' @export
+proc_rank <- function(x, k = 5, ties = "min") {
+  stopifnot(!any(is.na(x)))
+  out <- floor(rank(x, ties.method = ties) * k / (length(x) + 1)) + 1
+  factor(out, levels = 1:k, ordered = TRUE)
+}
+
+#' Get Data for polr()
+#'
+#' Retrieve, polish and quintile data for polr() bug models
+#' @param df source data.frame
+#' @param x variable of interest
+#' @param adj adjustment varaiables
+#' @param fm MEC filter
+#' @param bug genera or phyla
+#' @param ... Arguments passed to proc_rank()
+#'
+#' @return nested tibble
+#' @export
+get_polr_data <- function(df, x, adj, fm, bug = c("phyla", "genera"), ...) {
+  bug_id <- list(genera = quo(genus_id), phyla = quo(phylum))[[bug]]
+
+  df <- df %>%
+    polish(x, adj) %>%
+    filter_mec(fm)
+
+  retrieve(bug, !! bug_id, rel_abd) %>%
+    filter_mec("mGWAS") %>%
+    group_by(!! bug_id) %>%
+    mutate(quintile = proc_rank(rel_abd, ...)) %>%
+    ungroup %>%
+    filter_mec(fm) %>%
+    inner_join(df, by = "stool_id") %>%
+    drop_na %>%
+    nest(-!! bug_id)
+}
+
+#' Get Results for polr()
+#'
+#' Create list of polr() and lrtest() results
+#' @param m1 polr() object
+#' @param lrt lrtest() object
+#'
+#' @return list with tidy(), glance(), and lrtest() results
+#' @export
+get_polr_result <- function(m1, lrt) {
+  m1_out <- try(list(tidy = tidy(m1, exponentiate = TRUE) %>%
+                       filter(coefficient_type == "coefficient") %>%
+                       bind_cols(
+                         confint_tidy(m1, func = stats::confint.default) %>%
+                           mutate_all(exp) %>%
+                           mutate(ci_lo = pmin(conf.low, conf.high),
+                                  ci_hi = pmax(conf.low, conf.high)) %>%
+                           select(conf.low = ci_lo, conf.high = ci_hi)) %>%
+                       select(-coefficient_type),
+                     glance = glance(m1),
+                     lrt = lrt))
+  m1_out
+}
+
+#' Get polr()
+#'
+#' Run custom polr()
+#' @param df source data.frame
+#' @param x variable of interest
+#' @param adj adjustment varaiables
+#' @param fm MEC filter
+#' @param bug genera or phyla
+#' @param ... Arguments passed to polr()
+#'
+#' @return list with tidy(), glance(), and lrtest() results
+#' @export
+get_polr <- function(df, x, adj, fm, bug = c("phyla", "genera"), ...) {
+  bug <- match.arg(bug)
+  df <- get_polr_data(df, x, adj, fm, bug)
+  frm1 <- formadoo(x = x, adj = adj, y = "quintile")
+  frm0 <- formadoo(x = adj, y = "quintile")
+
+  mod_fun <- function(dfb, frm, ...) {
+    MASS::polr(formula = frm,
+               data = dfb,
+               Hess = TRUE,
+               method = "logistic",
+               ...)
+  }
+
+  df %>%
+    mutate(mod1 = map(data, possibly(mod_fun, otherwise = NULL), frm = frm1),
+           mod0 = map(data, possibly(mod_fun, otherwise = NULL), frm = frm0),
+           lrt = map2(mod0, mod1, possibly(lmtest::lrtest, otherwise = NULL)),
+           res = map2(mod1, lrt, possibly(get_polr_result, otherwise = NULL))) %>%
+    select(-data, -mod1, -mod0, -lrt)
+}
+
+#' Get Permanova Data
+#'
+#' Retrieve and polisth Unifrac matrix and predictor data
+#' @param df source data.frame
+#' @param x variable of interest
+#' @param adj adjustment varaiables
+#' @param fm MEC filter
+#' @param uni unifrac_uw or unifrac_wt
+#'
+#' @return list with unifrac distance object and predictor data.frame
+#' @export
+get_paov_data <- function(df, x, adj, fm, uni = c("unifrac_uw", "unifrac_wt")) {
+  uni <- match.arg(uni)
+  df <- df %>%
+    polish(x, adj) %>%
+    filter_mec(fm)
+  mat <- retrieve(uni, df$stool_id)
+  stopifnot(identical(labels(mat), df$stool_id))
+  list(yy = mat, xx = df)
+}
+
+#' Get Permanova
+#'
+#' Run custon adonis()/adonis2()
+#' @param df source data.frame
+#' @param x variable of interest
+#' @param adj adjustment varaiables
+#' @param fm MEC filter
+#' @param uni unifrac_uw or unifrac_wt
+#' @param md a1 = adonis() or a2 = adonis2()
+#' @param np number of permutations
+#' @param seed seed for reproducibility
+#' @param ... arguments passed to adonis()/adonis2()
+#'
+#' @return list with unifrac label and model results
+#' @export
+get_paov <- function(df, x, adj, fm, uni, md = c("a1", "a2"), np = 2, seed = 123456, ...) {
+  md <- match.arg(md)
+  df <- get_paov_data(df, x, adj, fm, uni)
+  mat <- df$yy
+  df <- df$xx
+  frm <- formadoo(x = x, adj = adj, y = "mat")
+  set.seed(seed)
+  mod_fun <- list(
+    a1 = function() {
+      vegan::adonis(formula = frm,
+                    data = df,
+                    contr.unordered = "contr.treatment",
+                    permutations = np,
+                    ...)
+    },
+    a2 = function() {
+      vegan::adonis2(formula = frm,
+                     data = df,
+                     by = NULL,
+                     permutations = np,
+                     ...)
+    }
+  )
+  mod <- try(mod_fun[[md]]())
+  mod <- if (any(class(mod) == "try_error") | md == "a2") mod else mod$aov.tab
+
+  list(unifrac = uni, mod = mod)
+}
+
 #' Stratify Data
 #'
 #' Stratify a data frame by a list of strata
