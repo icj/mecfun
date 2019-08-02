@@ -152,24 +152,6 @@ retrieve.list <- function(x, ..., path = "Data", join = dplyr::left_join){
   purrr::reduce(x, join, by = "stool_id")
 }
 
-#' Create Formula
-#'
-#' formula with variable of interest placed as the last term
-#' @param x variable of interest
-#' @param adj adjustment variables
-#' @param y response variable
-#' @param ... Arguments passed to reformulate()
-#'
-#' @return formula
-#' @importFrom stats reformulate
-#' @export
-formadoo <- function(x, adj = NULL, y = NULL, ...) {
-  adj <- setdiff(unlist(adj), c(x, y))
-  x <- setdiff(x, y)
-  x <- c(adj, x)
-  reformulate(x, y, ...)
-}
-
 #' Get tableby()
 #'
 #' Run custom tableby()
@@ -212,8 +194,8 @@ get_lm <- function(df, y, x, adj, fm, ...) {
     polish(y, x, adj) %>%
     filter_mec(fm) %>%
     drop_na
-  frm1 <- formadoo(x = x, adj = adj, y = y)
-  frm0 <- formadoo(x = adj, y = y)
+  frm1 <- formulize(y = y, x = c(setdiff(adj, x), x))
+  frm0 <- formulize(y = y, x = setdiff(adj, x))
 
   mod1 <- lm(frm1, data = df, ...)
   mod0 <- update(mod1, frm0)
@@ -308,8 +290,8 @@ get_polr_result <- function(m1, lrt) {
 get_polr <- function(df, x, adj, fm, bug = c("phyla", "genera"), ...) {
   bug <- match.arg(bug)
   df <- get_polr_data(df, x, adj, fm, bug)
-  frm1 <- formadoo(x = x, adj = adj, y = "quintile")
-  frm0 <- formadoo(x = adj, y = "quintile")
+  frm1 <- formulize(y = "quintile", x = c(setdiff(adj, x), x))
+  frm0 <- formulize(y = "quintile", x = setdiff(adj, x))
 
   mod_fun <- function(dfb, frm, ...) {
     MASS::polr(formula = frm,
@@ -369,7 +351,7 @@ get_paov <- function(df, x, adj, fm, uni, md = c("a1", "a2"), np = 2, seed = 123
   df <- get_paov_data(df, x, adj, fm, uni)
   mat <- df$yy
   df <- df$xx
-  frm <- formadoo(x = x, adj = adj, y = "mat")
+  frm <- formulize(y = "mat", x = c(setdiff(adj, x), x))
   set.seed(seed)
   mod_fun <- list(
     a1 = function() {
