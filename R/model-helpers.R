@@ -342,7 +342,8 @@ get_paov_data <- function(df, x, adj, fm, uni = c("unifrac_uw", "unifrac_wt")) {
   uni <- match.arg(uni)
   df <- df %>%
     polish(x, adj) %>%
-    filter_mec(fm)
+    filter_mec(fm) %>%
+    drop_na
   mat <- retrieve(uni, df$stool_id)
   stopifnot(identical(labels(mat), df$stool_id))
   list(yy = mat, xx = df)
