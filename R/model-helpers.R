@@ -370,7 +370,13 @@ get_paov <- function(df, x, adj, fm, uni, md = c("a1", "a2"), np = 2, seed = 123
     }
   )
   mod <- try(mod_fun[[md]]())
-  mod <- if (any(class(mod) == "try_error") | md == "a2") mod else mod$aov.tab
+  mod <- if (any(class(mod) == "try_error")) {
+    mod
+  } else if (md == "a1") {
+    suppressWarnings(tidy(mod$aov.tab))
+  } else if (md == "a2") {
+    suppressWarnings(tidy(mod))
+  } else NULL
 
   list(unifrac = uni, frm = frm, mod = mod)
 }
