@@ -378,7 +378,7 @@ get_paov <- function(df, x, adj, fm, uni, md = c("a1", "a2"), np = 2, seed = 123
     suppressWarnings(tidy(mod))
   } else NULL
 
-  list(unifrac = uni, frm = frm, mod = mod)
+  list(unifrac = uni, frm = as.character(frm), mod = mod)
 }
 
 #' Stratify Data
