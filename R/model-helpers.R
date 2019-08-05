@@ -372,7 +372,7 @@ get_paov <- function(df, x, adj, fm, uni, md = c("a1", "a2"), np = 2, seed = 123
   mod <- try(mod_fun[[md]]())
   mod <- if (any(class(mod) == "try_error") | md == "a2") mod else mod$aov.tab
 
-  list(unifrac = uni, mod = mod)
+  list(unifrac = uni, frm = frm, mod = mod)
 }
 
 #' Stratify Data
