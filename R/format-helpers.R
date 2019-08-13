@@ -235,7 +235,9 @@ make_dl_link <- function(x, path, timestamp = TRUE){
   srch <- sub(paste0("\\.", type, "$"),
               paste0("*.", type),
               path)
-  old <- sort(Sys.glob(srch), decreasing = TRUE)
+
+  old <- Sys.glob(srch)
+  old <- sort(old, decreasing = TRUE)
 
   if (timestamp) {
     path <- sub(paste0("\\.", type, "$"),
@@ -243,12 +245,38 @@ make_dl_link <- function(x, path, timestamp = TRUE){
                 path)
   }
 
-  if (type == "csv") {
-    readr::write_csv(x, path)
+  old_files <- length(old) > 0
+  write_fun <- if (type == "csv") {
+    readr::write_csv
   } else if (type == "xlsx") {
-    writexl::write_xlsx(x, path)
+    writexl::write_xlsx
   }
-  if (length(old) > 0) {
+
+  read_fun <- if (type == "csv") {
+    readr::read_csv
+  } else if (type == "xlsx") {
+    function(pp) {
+      shts <- readxl::excel_sheets(pp)
+      lapply(shts, readxl::read_xlsx, path = pp)
+    }
+  }
+
+  write_fun(x, path)
+
+  if (old_files) {
+    new_file <- suppressMessages(read_fun(path))
+    old_file <- suppressMessages(read_fun(old[1]))
+    same <- if (type == "xlsx") {
+      all(sapply(1:length(new_file), function(x){
+        identical(new_file[[x]], old_file[[x]])
+      }))
+    } else identical(new_file, old_file)
+
+    if (same) {
+      file.remove(path)
+      path <- old[1]
+      old <- old[-1]
+    }
     htmltools::tags$p(
       htmltools::h5("Download results:"),
       htmltools::a(basename(path),

@@ -22,6 +22,7 @@ Imports:
     knitr,
     arsenal,
     readr,
+    readxl,
     writexl,
     htmltools,
     viridis,
